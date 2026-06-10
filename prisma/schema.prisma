@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  EXPERTO
+  USUARIO
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  REVOKED
+}
+
+enum AssetType {
+  PROMPT
+  FLUJO
+  AGENTE
+}
+
+enum AssetStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  REJECTED
+  DISCONTINUED
+}
+
+enum OutputFormat {
+  JSON
+  MARKDOWN
+  TABLA
+  CODIGO
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  username      String    @unique
+  role          Role      @default(USUARIO)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  expertRequest ExpertRequest?
+  assets        Asset[]
+  purchases     Purchase[]
+  cartItems     CartItem[]
+  reviews       Review[]
+}
+
+model ExpertRequest {
+  id         String        @id @default(cuid())
+  userId     String        @unique
+  message    String?
+  status     RequestStatus @default(PENDING)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  reviewedAt DateTime?
+  reviewedBy String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Asset {
+  id               String       @id @default(cuid())
+  userId           String
+  title            String
+  slug             String       @unique
+  description      String?
+  type             AssetType    @default(PROMPT)
+  status           AssetStatus  @default(DRAFT)
+  price            Decimal      @default(0) @db.Decimal(10, 2)
+  roleDefinition   String?
+  contentScope     String?
+  taskDefinition   String?
+  outputFormat     OutputFormat @default(JSON)
+  restrictions     String[]     @default([])
+  category         String?
+  promptContent    String?
+  recommendedModel String?
+  coverImage       String?
+  rejectionReason  String?
+  reviewedAt       DateTime?
+  reviewedBy       String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  purchases Purchase[]
+  cartItems CartItem[]
+  reviews   Review[]
+}
+
+model Purchase {
+  id              String   @id @default(cuid())
+  userId          String
+  assetId         String
+  amount          Decimal  @default(0) @db.Decimal(10, 2)
+  stripeSessionId String?  @unique
+  createdAt       DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  userId    String
+  assetId   String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, assetId])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
