@@ -158,7 +158,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
   const [price, setPrice] = useState(initialData?.price ?? "");
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-  const [errorMsg, setErrorMsg] = useState("");
+  const [errorMsgs, setErrorMsgs] = useState<string[]>([]);
 
   const restrictionInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -199,16 +199,41 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
     }
   }
 
+  function validateAndNext() {
+    if (activeTab === "configuracion") {
+      const errors: string[] = [];
+      if (!title.trim()) errors.push("Título del activo");
+      if (!description.trim()) errors.push("Descripción");
+      if (!coverImage) errors.push("Imagen de portada");
+      if (!category) errors.push("Categoría");
+      if (!roleDefinition.trim()) errors.push("Definición de rol");
+      if (!contentScope.trim()) errors.push("Delimitación de contenido");
+      if (!taskDefinition.trim()) errors.push("Definición de tarea");
+      if (!promptContent.trim()) errors.push("Prompt");
+      if (errors.length > 0) { setErrorMsgs(errors); setStatus("error"); return; }
+      setStatus("idle");
+      setErrorMsgs([]);
+      setActiveTab("licencia");
+    } else if (activeTab === "licencia") {
+      const errors: string[] = [];
+      if (price === "" || price === null) errors.push("Precio (escribe 0 si es gratis)");
+      else if (isNaN(Number(price)) || Number(price) < 0) errors.push("Precio debe ser un número mayor o igual a 0");
+      if (errors.length > 0) { setErrorMsgs(errors); setStatus("error"); return; }
+      setStatus("idle");
+      setErrorMsgs([]);
+      setActiveTab("despliegue");
+    }
+  }
+
   async function handleSubmit(publish: boolean) {
     if (!title.trim()) {
-      setActiveTab("configuracion");
-      setErrorMsg("El título del activo es obligatorio.");
+      setErrorMsgs(["Título del activo"]);
       setStatus("error");
       return;
     }
 
     setStatus("loading");
-    setErrorMsg("");
+    setErrorMsgs([]);
 
     const payload = {
       title,
@@ -240,7 +265,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMsg(data.error ?? "Error al guardar el activo.");
+        setErrorMsgs([data.error ?? "Error al guardar el activo."]);
         setStatus("error");
         return;
       }
@@ -252,7 +277,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
       }
       router.refresh();
     } catch {
-      setErrorMsg("Error de conexión. Intenta de nuevo.");
+      setErrorMsgs(["Error de conexión. Intenta de nuevo."]);
       setStatus("error");
     }
   }
@@ -262,64 +287,80 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
 
   return (
     <div className="flex-1 min-w-0 flex flex-col gap-7">
-      {/* Title + Tabs */}
+      {/* Title + Step indicator */}
       <div className="flex flex-col gap-4">
         <h2 className="text-2xl font-bold text-white">
           {isEdit ? "Editar activo" : "Configurar activo"}
         </h2>
-        <div className="flex gap-1">
-          {(["configuracion", "licencia", "despliegue"] as ActiveTab[]).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-3 md:px-5 py-2 rounded-lg text-xs md:text-sm font-medium capitalize transition-colors ${
-                activeTab === tab
-                  ? "text-white"
-                  : "text-foreground/40 hover:text-foreground/70"
-              }`}
-              style={
-                activeTab === tab
-                  ? {
-                      background: "rgba(98,60,234,0.18)",
-                      border: "1px solid rgba(98,60,234,0.35)",
+        <div className="flex items-center gap-2">
+          {([
+            { key: "configuracion", label: "Configuración", step: 1 },
+            { key: "licencia", label: "Licencia", step: 2 },
+            { key: "despliegue", label: "Despliegue", step: 3 },
+          ] as { key: ActiveTab; label: string; step: number }[]).map(({ key, label, step }, i) => {
+            const isDone = (activeTab === "licencia" && step === 1) || (activeTab === "despliegue" && step < 3);
+            const isActive = activeTab === key;
+            return (
+              <div key={key} className="flex items-center gap-2">
+                {i > 0 && (
+                  <div
+                    className="w-8 h-px"
+                    style={{ background: isDone ? "rgba(98,60,234,0.6)" : "rgba(255,255,255,0.1)" }}
+                  />
+                )}
+                <div className="flex items-center gap-1.5">
+                  <div
+                    className="w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0"
+                    style={
+                      isActive
+                        ? { background: "#623CEA", color: "#fff" }
+                        : isDone
+                          ? { background: "rgba(98,60,234,0.3)", color: "#a78bfa" }
+                          : { background: "rgba(255,255,255,0.06)", color: "rgba(242,242,242,0.3)" }
                     }
-                  : {
-                      background: "transparent",
-                      border: "1px solid transparent",
-                    }
-              }
-            >
-              {tab === "configuracion"
-                ? "Configuración"
-                : tab === "licencia"
-                  ? "Licencia"
-                  : "Despliegue"}
-            </button>
-          ))}
+                  >
+                    {isDone ? "✓" : step}
+                  </div>
+                  <span
+                    className="text-xs md:text-sm font-medium"
+                    style={{ color: isActive ? "#fff" : isDone ? "rgba(167,139,250,0.8)" : "rgba(242,242,242,0.3)" }}
+                  >
+                    {label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Success banner */}
+      {/* Floating success toast */}
       {status === "success" && (
         <div
-          className="px-4 py-3 rounded-lg text-sm text-white"
-          style={{ background: "rgba(5,199,147,0.15)", border: "1px solid rgba(5,199,147,0.3)" }}
+          className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm text-white shadow-lg max-w-sm"
+          style={{ background: "rgba(5,199,147,0.18)", border: "1px solid rgba(5,199,147,0.35)", backdropFilter: "blur(8px)" }}
         >
           {isEdit ? "¡Activo actualizado correctamente!" : "¡Activo guardado! Puedes verlo en tu panel de usuario."}
         </div>
       )}
 
-      {/* Error banner */}
-      {status === "error" && errorMsg && (
+      {/* Floating error toast */}
+      {status === "error" && errorMsgs.length > 0 && (
         <div
-          className="px-4 py-3 rounded-lg text-sm"
-          style={{
-            background: "rgba(239,68,68,0.12)",
-            border: "1px solid rgba(239,68,68,0.3)",
-            color: "#f87171",
-          }}
+          className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-xl text-sm shadow-lg max-w-xs"
+          style={{ background: "rgba(20,16,30,0.95)", border: "1px solid rgba(239,68,68,0.4)", backdropFilter: "blur(8px)" }}
         >
-          {errorMsg}
+          <p className="font-semibold mb-2" style={{ color: "#f87171" }}>
+            {errorMsgs.length === 1 ? "Campo requerido:" : "Campos requeridos:"}
+          </p>
+          <ul className="flex flex-col gap-1">
+            {errorMsgs.map((msg) => (
+              <li key={msg} className="flex items-center gap-2 text-[12px]" style={{ color: "rgba(248,113,113,0.85)" }}>
+                <span className="w-1 h-1 rounded-full bg-red-400 shrink-0" />
+                {msg}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -346,7 +387,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm text-foreground/60">Descripción</label>
+              <label className="text-sm text-foreground/60">Descripción <span className="text-red-400">*</span></label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -360,7 +401,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
 
             {/* Cover image */}
             <div className="flex flex-col gap-1.5">
-              <label className="text-sm text-foreground/60">Imagen de portada</label>
+              <label className="text-sm text-foreground/60">Imagen de portada <span className="text-red-400">*</span></label>
               <input
                 ref={imageInputRef}
                 type="file"
@@ -450,7 +491,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
 
           {/* Category */}
           <section className="flex flex-col gap-4">
-            <h3 className="text-base font-semibold text-white">Categoría</h3>
+            <h3 className="text-base font-semibold text-white">Categoría <span className="text-red-400">*</span></h3>
             <div className="flex flex-wrap gap-2 max-w-[640px]">
               {ASSET_CATEGORIES.map(({ id, label }) => (
                 <button
@@ -483,7 +524,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
             <h3 className="text-base font-semibold text-white">Configuración técnica</h3>
 
             <div className="flex flex-col gap-1.5 max-w-[430px]">
-              <label className="text-sm text-foreground/60">Definición de rol</label>
+              <label className="text-sm text-foreground/60">Definición de rol <span className="text-red-400">*</span></label>
               <input
                 type="text"
                 value={roleDefinition}
@@ -496,7 +537,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
 
             <div className="flex flex-col gap-1.5 max-w-[430px]">
               <div className="flex items-center gap-1.5">
-                <label className="text-sm text-foreground/60">Delimitación de contenido</label>
+                <label className="text-sm text-foreground/60">Delimitación de contenido <span className="text-red-400">*</span></label>
                 <HelpIcon />
               </div>
               <input
@@ -511,7 +552,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
 
             <div className="flex flex-col gap-1.5 max-w-[430px]">
               <div className="flex items-center gap-1.5">
-                <label className="text-sm text-foreground/60">Definición de tarea</label>
+                <label className="text-sm text-foreground/60">Definición de tarea <span className="text-red-400">*</span></label>
                 <HelpIcon />
               </div>
               <input
@@ -607,7 +648,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
             {/* Prompt + Variables */}
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex-1 flex flex-col gap-1.5">
-                <label className="text-sm text-foreground/60">Prompt</label>
+                <label className="text-sm text-foreground/60">Prompt <span className="text-red-400">*</span></label>
                 <textarea
                   value={promptContent}
                   onChange={(e) => setPromptContent(e.target.value)}
@@ -691,7 +732,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
           <h3 className="text-base font-semibold text-white">Licencia y precio</h3>
 
           <div className="flex flex-col gap-1.5 max-w-[260px]">
-            <label className="text-sm text-foreground/60">Precio (USD)</label>
+            <label className="text-sm text-foreground/60">Precio (USD) <span className="text-red-400">*</span></label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm text-foreground/40">
                 $
@@ -772,8 +813,24 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
         </section>
       )}
 
-      {/* Action buttons — always visible */}
+      {/* Action buttons */}
       <div className="flex items-center gap-3 pt-2 pb-4">
+        {activeTab !== "configuracion" && (
+          <button
+            type="button"
+            onClick={() => setActiveTab(activeTab === "despliegue" ? "licencia" : "configuracion")}
+            disabled={isLoading}
+            className="px-5 py-2.5 rounded-pill text-sm font-semibold transition-all hover:opacity-80 disabled:opacity-40"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(242,242,242,0.5)",
+            }}
+          >
+            ← Anterior
+          </button>
+        )}
+
         <button
           onClick={() => handleSubmit(false)}
           disabled={isLoading}
@@ -786,17 +843,33 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
         >
           {isLoading ? "Guardando..." : "Guardar borrador"}
         </button>
-        <button
-          onClick={() => handleSubmit(true)}
-          disabled={isLoading}
-          className="px-5 py-2.5 rounded-pill text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
-          style={{
-            background: "linear-gradient(135deg, #623cea 0%, #372284 100%)",
-            boxShadow: "0 0 14px rgba(98,60,234,0.35)",
-          }}
-        >
-          {isLoading ? "Enviando..." : "Enviar a revisión"}
-        </button>
+
+        {activeTab !== "despliegue" ? (
+          <button
+            type="button"
+            onClick={validateAndNext}
+            disabled={isLoading}
+            className="px-5 py-2.5 rounded-pill text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+            style={{
+              background: "linear-gradient(135deg, #623cea 0%, #372284 100%)",
+              boxShadow: "0 0 14px rgba(98,60,234,0.35)",
+            }}
+          >
+            Siguiente →
+          </button>
+        ) : (
+          <button
+            onClick={() => handleSubmit(true)}
+            disabled={isLoading}
+            className="px-5 py-2.5 rounded-pill text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-40"
+            style={{
+              background: "linear-gradient(135deg, #623cea 0%, #372284 100%)",
+              boxShadow: "0 0 14px rgba(98,60,234,0.35)",
+            }}
+          >
+            {isLoading ? "Enviando..." : "Enviar a revisión"}
+          </button>
+        )}
       </div>
     </div>
   );
