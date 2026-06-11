@@ -175,7 +175,7 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
     if (res.ok) {
       setCoverImage(data.url);
     } else {
-      setErrorMsg(data.error ?? "Error al subir la imagen");
+      setErrorMsgs([data.error ?? "Error al subir la imagen"]);
       setStatus("error");
     }
   }
