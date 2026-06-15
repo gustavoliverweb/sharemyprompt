@@ -29,19 +29,6 @@ export const authConfig = {
       const isLoggedIn = !!auth?.user;
       const { pathname } = request.nextUrl;
 
-      console.log("[AUTH] authorized callback", {
-        pathname,
-        isLoggedIn,
-        userId: auth?.user?.id,
-        role: auth?.user?.role,
-        method: request.method,
-        headers: {
-          "next-url": request.headers.get("next-url"),
-          "rsc": request.headers.get("rsc"),
-          "next-router-prefetch": request.headers.get("next-router-prefetch"),
-        },
-      });
-
       if (
         pathname.startsWith("/user-dashboard") ||
         pathname.startsWith("/upload-active") ||
@@ -49,22 +36,13 @@ export const authConfig = {
         pathname.startsWith("/cart") ||
         pathname.startsWith("/finances")
       ) {
-        if (!isLoggedIn) {
-          console.log("[AUTH] not logged in, returning false");
-          return false;
-        }
+        if (!isLoggedIn) return false;
 
         const role = auth?.user?.role as string | undefined;
 
-        if (pathname.startsWith("/admin")) {
-          const result = role === "ADMIN";
-          console.log("[AUTH] /admin check →", result);
-          return result;
-        }
+        if (pathname.startsWith("/admin")) return role === "ADMIN";
         if (pathname.startsWith("/upload-active") || pathname.startsWith("/finances")) {
-          const result = role === "EXPERTO" || role === "ADMIN";
-          console.log("[AUTH] /upload-active|/finances check → role:", role, "result:", result);
-          return result;
+          return role === "EXPERTO" || role === "ADMIN";
         }
 
         return true;

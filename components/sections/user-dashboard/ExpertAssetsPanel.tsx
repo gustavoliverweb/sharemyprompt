@@ -134,7 +134,7 @@ export function ExpertAssetsPanel({ assets: initial }: { assets: Asset[] }) {
 
                 {/* Actions */}
                 <div className="flex gap-2 mt-0.5 flex-wrap">
-                  {(asset.status === "DRAFT" || asset.status === "REJECTED") && (
+                  {asset.status === "REJECTED" && (
                     <button
                       onClick={() => handleSubmit(asset.id)}
                       disabled={isLoading}
