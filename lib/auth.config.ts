@@ -1,5 +1,4 @@
 import type { NextAuthConfig } from "next-auth";
-import { NextResponse } from "next/server";
 
 export const authConfig = {
   trustHost: true,
@@ -33,20 +32,17 @@ export const authConfig = {
       if (
         pathname.startsWith("/user-dashboard") ||
         pathname.startsWith("/upload-active") ||
-        pathname.startsWith("/admin")
+        pathname.startsWith("/admin") ||
+        pathname.startsWith("/cart") ||
+        pathname.startsWith("/finances")
       ) {
         if (!isLoggedIn) return false;
 
         const role = auth?.user?.role as string | undefined;
 
         if (pathname.startsWith("/admin")) return role === "ADMIN";
-        if (pathname.startsWith("/upload-active")) {
-          if (role === "EXPERTO" || role === "ADMIN") return true;
-          return NextResponse.redirect(new URL("/user-dashboard", request.nextUrl));
-        }
-        if (pathname.startsWith("/finances")) {
-          if (role === "EXPERTO" || role === "ADMIN") return true;
-          return NextResponse.redirect(new URL("/user-dashboard", request.nextUrl));
+        if (pathname.startsWith("/upload-active") || pathname.startsWith("/finances")) {
+          return role === "EXPERTO" || role === "ADMIN";
         }
 
         return true;
