@@ -100,7 +100,6 @@ export function LoginForm() {
       setError("Correo o contraseña incorrectos");
     } else {
       router.push("/user-dashboard");
-      router.refresh();
     }
   }
 
