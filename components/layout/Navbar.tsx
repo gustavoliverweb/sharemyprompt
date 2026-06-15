@@ -12,7 +12,7 @@ const NAV_LINKS = ASSET_CATEGORIES.map(({ id, label }) => ({
 }));
 
 const ACTION_LINKS = [
-  { label: "Comenzar a vender", href: "/upload-active" },
+  { label: "Comenzar a vender", href: "/upload-active", prefetch: false as const },
   { label: "Explorar", href: "/explorer" },
   { label: "Sobre nosotros", href: "/about" },
 ];
@@ -117,10 +117,11 @@ export function Navbar() {
 
           {/* Actions — desktop */}
           <div className="hidden lg:flex items-center gap-4 shrink-0 ml-auto">
-            {ACTION_LINKS.map(({ label, href }) => (
+            {ACTION_LINKS.map(({ label, href, prefetch }) => (
               <Link
                 key={href}
                 href={href}
+                prefetch={prefetch}
                 className="text-[13px] text-foreground/60 hover:text-foreground transition-colors whitespace-nowrap"
               >
                 {label}
@@ -188,10 +189,11 @@ export function Navbar() {
         style={{ maxHeight: isOpen ? "500px" : "0px" }}
       >
         <nav className="flex flex-col px-6 pb-5 gap-1" aria-label="Menú móvil">
-          {ACTION_LINKS.map(({ label, href }) => (
+          {ACTION_LINKS.map(({ label, href, prefetch }) => (
             <Link
               key={href}
               href={href}
+              prefetch={prefetch}
               onClick={() => setIsOpen(false)}
               className="text-[14px] text-foreground/70 hover:text-foreground py-2.5 border-b border-white/[0.06] transition-colors"
             >
