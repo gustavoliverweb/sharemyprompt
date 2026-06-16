@@ -85,7 +85,7 @@ export function SimpleProductCard({ id, title, author, price, image, href, type,
             por{" "}
             <span className="hover:text-foreground/60 transition-colors">{author}</span>
           </p>
-          {rating !== undefined && rating > 0 && (
+          {rating !== undefined && (
             <div className="flex items-center gap-1 mt-0.5">
               <StarIcon />
               <span className="text-xs" style={{ color: "#FDD64B" }}>{rating.toFixed(1)}</span>
