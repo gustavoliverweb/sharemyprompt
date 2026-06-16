@@ -44,22 +44,6 @@ export function ExpertAssetsPanel({ assets: initial }: { assets: Asset[] }) {
   const [assets, setAssets] = useState(initial);
   const [loading, setLoading] = useState<string | null>(null);
 
-  async function handleSubmit(id: string) {
-    setLoading(id);
-    const res = await fetch(`/api/assets/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "submit" }),
-    });
-    setLoading(null);
-    if (res.ok) {
-      setAssets((prev) =>
-        prev.map((a) => (a.id === id ? { ...a, status: "PENDING_REVIEW" as const, rejectionReason: null } : a))
-      );
-      router.refresh();
-    }
-  }
-
   async function handleDiscontinue(id: string) {
     setLoading(id);
     const res = await fetch(`/api/assets/${id}`, {
@@ -134,16 +118,6 @@ export function ExpertAssetsPanel({ assets: initial }: { assets: Asset[] }) {
 
                 {/* Actions */}
                 <div className="flex gap-2 mt-0.5 flex-wrap">
-                  {asset.status === "REJECTED" && (
-                    <button
-                      onClick={() => handleSubmit(asset.id)}
-                      disabled={isLoading}
-                      className="text-[12px] font-medium px-3 py-1 rounded-pill transition-all hover:opacity-90 disabled:opacity-40"
-                      style={{ background: "rgba(98,60,234,0.2)", color: "#9b87f5", border: "1px solid rgba(98,60,234,0.3)" }}
-                    >
-                      {isLoading ? "..." : "Enviar a revisión"}
-                    </button>
-                  )}
                   {(asset.status === "DRAFT" || asset.status === "PUBLISHED") && (
                     <Link
                       href={`/upload-active/${asset.id}`}
