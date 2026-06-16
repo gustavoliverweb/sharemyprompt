@@ -13,6 +13,11 @@ function formatPrice(price: { toString(): string }): string {
   return n === 0 ? "Gratis" : `$${n.toFixed(2)}`;
 }
 
+function avgRating(reviews: { rating: number }[]): number {
+  if (reviews.length === 0) return 0;
+  return reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
+}
+
 type PageSearchParams = Promise<{ q?: string; cat?: string; type?: string }>;
 
 export default async function ExplorerPage({
@@ -61,7 +66,10 @@ export default async function ExplorerPage({
       ...(type && { type: type as AssetType }),
     },
     orderBy: { updatedAt: "desc" },
-    include: { user: { select: { username: true, name: true } } },
+    include: {
+      user: { select: { username: true, name: true } },
+      reviews: { select: { rating: true } },
+    },
   });
 
   // Build sections for the ungrouped view
@@ -143,6 +151,7 @@ export default async function ExplorerPage({
                       image={asset.coverImage}
                       href={`/p/${asset.slug}`}
                       type={asset.type as AssetType}
+                      rating={avgRating(asset.reviews)}
                       isLoggedIn={isLoggedIn}
                       inCart={cartSet.has(asset.id)}
                     />
@@ -185,6 +194,7 @@ export default async function ExplorerPage({
                       image={asset.coverImage}
                       href={`/p/${asset.slug}`}
                       type={asset.type as AssetType}
+                      rating={avgRating(asset.reviews)}
                       isLoggedIn={isLoggedIn}
                       inCart={cartSet.has(asset.id)}
                     />
