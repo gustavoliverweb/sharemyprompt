@@ -89,19 +89,10 @@ export function LatestProductsClient({ products }: { products: LatestProduct[] }
 
       {/* Product grid */}
       {filtered.length > 0 ? (
-        <div className="flex flex-col gap-8">
-          <div className="flex flex-col md:flex-row gap-8">
-            {filtered.slice(0, 4).map((p) => (
-              <SimpleProductCard key={p.id} {...p} />
-            ))}
-          </div>
-          {filtered.length > 4 && (
-            <div className="flex flex-col md:flex-row gap-8">
-              {filtered.slice(4, 8).map((p) => (
-                <SimpleProductCard key={p.id} {...p} />
-              ))}
-            </div>
-          )}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {filtered.map((p) => (
+            <SimpleProductCard key={p.id} {...p} />
+          ))}
         </div>
       ) : (
         <p className="text-center text-foreground/50 py-12">
