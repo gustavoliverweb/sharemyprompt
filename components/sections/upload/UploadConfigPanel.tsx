@@ -523,44 +523,44 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
           <section className="flex flex-col gap-5 max-w-[640px]">
             <h3 className="text-base font-semibold text-white">Configuración técnica</h3>
 
-            <div className="flex flex-col gap-1.5 max-w-[430px]">
+            <div className="flex flex-col gap-1.5">
               <label className="text-sm text-foreground/60">Definición de rol <span className="text-red-400">*</span></label>
-              <input
-                type="text"
+              <textarea
                 value={roleDefinition}
                 onChange={(e) => setRoleDefinition(e.target.value)}
                 placeholder="Ej: Actúa como un fotógrafo experto en cinematografía..."
-                className={inputClass}
+                rows={3}
+                className={`${inputClass} resize-none`}
                 style={inputStyle}
               />
             </div>
 
-            <div className="flex flex-col gap-1.5 max-w-[430px]">
+            <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
                 <label className="text-sm text-foreground/60">Delimitación de contenido <span className="text-red-400">*</span></label>
                 <HelpIcon />
               </div>
-              <input
-                type="text"
+              <textarea
                 value={contentScope}
                 onChange={(e) => setContentScope(e.target.value)}
                 placeholder="Delimita una o más áreas temáticas del activo..."
-                className={inputClass}
+                rows={3}
+                className={`${inputClass} resize-none`}
                 style={inputStyle}
               />
             </div>
 
-            <div className="flex flex-col gap-1.5 max-w-[430px]">
+            <div className="flex flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
                 <label className="text-sm text-foreground/60">Definición de tarea <span className="text-red-400">*</span></label>
                 <HelpIcon />
               </div>
-              <input
-                type="text"
+              <textarea
                 value={taskDefinition}
                 onChange={(e) => setTaskDefinition(e.target.value)}
-                placeholder="Define el objetivo principal en 50–100 caracteres..."
-                className={inputClass}
+                placeholder="Define el objetivo principal del activo..."
+                rows={3}
+                className={`${inputClass} resize-none`}
                 style={inputStyle}
               />
             </div>
