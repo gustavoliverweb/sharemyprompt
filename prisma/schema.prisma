@@ -60,6 +60,23 @@ model User {
   purchases     Purchase[]
   cartItems     CartItem[]
   reviews       Review[]
+
+  roleChangesReceived RoleChange[] @relation("RoleChangeTarget")
+  roleChangesMade     RoleChange[] @relation("RoleChangeActor")
+}
+
+model RoleChange {
+  id          String   @id @default(cuid())
+  userId      String
+  fromRole    Role
+  toRole      Role
+  changedById String
+  createdAt   DateTime @default(now())
+
+  user      User @relation("RoleChangeTarget", fields: [userId], references: [id], onDelete: Cascade)
+  changedBy User @relation("RoleChangeActor", fields: [changedById], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model ExpertRequest {
@@ -110,13 +127,14 @@ model Purchase {
   userId          String
   assetId         String
   amount          Decimal  @default(0) @db.Decimal(10, 2)
-  stripeSessionId String?  @unique
+  stripeSessionId String?
   createdAt       DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   asset Asset @relation(fields: [assetId], references: [id], onDelete: Cascade)
 
   @@unique([userId, assetId])
+  @@index([stripeSessionId])
 }
 
 model CartItem {

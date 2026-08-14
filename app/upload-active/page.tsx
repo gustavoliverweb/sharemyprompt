@@ -17,6 +17,7 @@ function BackArrowIcon() {
 export default async function UploadActivePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  if (session.user.role !== "EXPERTO" && session.user.role !== "ADMIN") redirect("/403");
 
   const { name, username } = session.user;
   const displayName = username ?? name ?? "Experto";

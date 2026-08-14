@@ -36,16 +36,12 @@ export const authConfig = {
         pathname.startsWith("/cart") ||
         pathname.startsWith("/finances")
       ) {
-        if (!isLoggedIn) return false;
-
-        const role = auth?.user?.role as string | undefined;
-
-        if (pathname.startsWith("/admin")) return role === "ADMIN";
-        if (pathname.startsWith("/upload-active") || pathname.startsWith("/finances")) {
-          return role === "EXPERTO" || role === "ADMIN";
-        }
-
-        return true;
+        // Aquí solo se valida sesión. El control de rol (ADMIN / EXPERTO) se
+        // hace en cada página server component con redirect("/403") — un
+        // NextResponse.redirect() devuelto desde este callback rompió producción
+        // el 2026-06-15 (condición de carrera de router cache en edge runtime
+        // con Auth.js v5 beta). No reintroducir lógica de rol ni NextResponse aquí.
+        return isLoggedIn;
       }
 
       return true;

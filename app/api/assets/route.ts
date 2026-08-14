@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { validatePillarsForReview } from "@/lib/asset-validation";
 import type { AssetType, OutputFormat } from "@/app/generated/prisma/enums";
 
 function generateSlug(title: string): string {
@@ -79,6 +80,13 @@ export async function POST(req: NextRequest) {
   const resolvedFormat: OutputFormat = validFormats.includes(outputFormat)
     ? outputFormat
     : "JSON";
+
+  if (publish) {
+    const pillarErrors = validatePillarsForReview({ roleDefinition, contentScope, taskDefinition });
+    if (pillarErrors.length > 0) {
+      return NextResponse.json({ error: pillarErrors.join(" · ") }, { status: 422 });
+    }
+  }
 
   const slug = generateSlug(title.trim());
 

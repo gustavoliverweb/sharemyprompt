@@ -1,13 +1,49 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { stripe } from "@/lib/stripe";
 import { DashboardSidebar } from "@/components/sections/user-dashboard/DashboardSidebar";
 import { AssetsLibrary } from "@/components/sections/user-dashboard/AssetsLibrary";
 import { DashboardRightPanel } from "@/components/sections/user-dashboard/DashboardRightPanel";
 
-export default async function UserDashboardPage() {
-  const session = await auth();
+export default async function UserDashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ session_id?: string; cart_paid?: string }>;
+}) {
+  const [session, sp] = await Promise.all([auth(), searchParams]);
   if (!session?.user) redirect("/login");
+
+  // Retorno del carrito desde Stripe — reconciliar por si el webhook aún no procesó
+  if (sp.cart_paid === "1" && sp.session_id) {
+    try {
+      const stripeSession = await stripe.checkout.sessions.retrieve(sp.session_id);
+      if (
+        stripeSession.payment_status === "paid" &&
+        stripeSession.metadata?.type === "cart" &&
+        stripeSession.metadata?.userId === session.user.id &&
+        stripeSession.metadata?.assetIds
+      ) {
+        const ids = stripeSession.metadata.assetIds.split(",").filter(Boolean);
+        const amount = (stripeSession.amount_total ?? 0) / 100 / (ids.length || 1);
+
+        await prisma.$transaction([
+          ...ids.map((id) =>
+            prisma.purchase.upsert({
+              where: { userId_assetId: { userId: session.user.id, assetId: id } },
+              update: { stripeSessionId: stripeSession.id },
+              create: { userId: session.user.id, assetId: id, amount, stripeSessionId: stripeSession.id },
+            })
+          ),
+          prisma.cartItem.deleteMany({
+            where: { userId: session.user.id, assetId: { in: ids } },
+          }),
+        ]);
+      }
+    } catch {
+      // session_id inválida o expirada — ignorar, el webhook es la fuente de verdad
+    }
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },

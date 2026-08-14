@@ -3,6 +3,7 @@
 import { useState, useRef, KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ASSET_CATEGORIES, type CategoryId } from "@/lib/categories";
+import { MIN_PILLAR_LENGTH, validatePillarsForReview } from "@/lib/asset-validation";
 
 type ActiveTab = "configuracion" | "licencia" | "despliegue";
 type ClassType = "PROMPT" | "FLUJO" | "AGENTE";
@@ -10,6 +11,7 @@ type OutputFormat = "JSON" | "MARKDOWN" | "TABLA" | "CODIGO";
 
 export interface AssetInitialData {
   id: string;
+  status?: "DRAFT" | "PENDING_REVIEW" | "PUBLISHED" | "REJECTED" | "DISCONTINUED";
   title: string;
   description: string | null;
   coverImage: string | null;
@@ -135,6 +137,9 @@ function extractVariables(prompt: string): string[] {
 export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialData }) {
   const router = useRouter();
   const isEdit = !!initialData;
+  // Un activo ya publicado no tiene "borrador" — specs.md exige que cualquier
+  // cambio pase de nuevo por revisión, así que aquí no aplica esa opción.
+  const wasPublished = initialData?.status === "PUBLISHED";
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("configuracion");
   const [assetType, setAssetType] = useState<ClassType>(initialData?.type ?? "PROMPT");
@@ -210,6 +215,9 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
       if (!contentScope.trim()) errors.push("Delimitación de contenido");
       if (!taskDefinition.trim()) errors.push("Definición de tarea");
       if (!promptContent.trim()) errors.push("Prompt");
+      if (errors.length === 0) {
+        errors.push(...validatePillarsForReview({ roleDefinition, contentScope, taskDefinition }));
+      }
       if (errors.length > 0) { setErrorMsgs(errors); setStatus("error"); return; }
       setStatus("idle");
       setErrorMsgs([]);
@@ -292,6 +300,14 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
         <h2 className="text-2xl font-bold text-white">
           {isEdit ? "Editar activo" : "Configurar activo"}
         </h2>
+        {wasPublished && (
+          <p
+            className="text-[12px] leading-[1.5] px-3 py-2 rounded-lg"
+            style={{ background: "rgba(226,149,15,0.1)", border: "1px solid rgba(226,149,15,0.3)", color: "#E2950F" }}
+          >
+            Este activo está publicado. Cualquier cambio se enviará de nuevo a revisión antes de aplicarse.
+          </p>
+        )}
         <div className="flex items-center gap-2">
           {([
             { key: "configuracion", label: "Configuración", step: 1 },
@@ -533,6 +549,9 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
                 className={`${inputClass} resize-none`}
                 style={inputStyle}
               />
+              <p className={`text-[11px] ${roleDefinition.trim().length >= MIN_PILLAR_LENGTH ? "text-emerald-400" : "text-foreground/35"}`}>
+                {roleDefinition.trim().length}/{MIN_PILLAR_LENGTH} caracteres mínimo (requerido para enviar a revisión)
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -548,6 +567,9 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
                 className={`${inputClass} resize-none`}
                 style={inputStyle}
               />
+              <p className={`text-[11px] ${contentScope.trim().length >= MIN_PILLAR_LENGTH ? "text-emerald-400" : "text-foreground/35"}`}>
+                {contentScope.trim().length}/{MIN_PILLAR_LENGTH} caracteres mínimo (requerido para enviar a revisión)
+              </p>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -563,6 +585,9 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
                 className={`${inputClass} resize-none`}
                 style={inputStyle}
               />
+              <p className={`text-[11px] ${taskDefinition.trim().length >= MIN_PILLAR_LENGTH ? "text-emerald-400" : "text-foreground/35"}`}>
+                {taskDefinition.trim().length}/{MIN_PILLAR_LENGTH} caracteres mínimo (requerido para enviar a revisión)
+              </p>
             </div>
 
             {/* Output format */}
@@ -752,30 +777,6 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
               Escribe 0 para distribuir gratis.
             </p>
           </div>
-
-          <div className="flex flex-col gap-3">
-            <label className="text-sm text-foreground/60">Tipo de licencia</label>
-            {[
-              { id: "personal", label: "Uso personal", desc: "Solo puede usarse de forma privada, sin redistribución." },
-              { id: "comercial", label: "Uso comercial", desc: "Permite usarlo en proyectos comerciales del comprador." },
-              { id: "libre", label: "Sin restricciones", desc: "El comprador puede usar, modificar y redistribuir libremente." },
-            ].map(({ id, label, desc }) => (
-              <label
-                key={id}
-                className="flex items-start gap-3 p-4 rounded-xl cursor-pointer transition-all"
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                }}
-              >
-                <input type="radio" name="license" value={id} className="mt-0.5 accent-primary" defaultChecked={id === "personal"} />
-                <div>
-                  <p className="text-sm text-white font-medium">{label}</p>
-                  <p className="text-[12px] text-foreground/45 mt-0.5">{desc}</p>
-                </div>
-              </label>
-            ))}
-          </div>
         </section>
       )}
 
@@ -831,18 +832,20 @@ export function UploadConfigPanel({ initialData }: { initialData?: AssetInitialD
           </button>
         )}
 
-        <button
-          onClick={() => handleSubmit(false)}
-          disabled={isLoading}
-          className="px-5 py-2.5 rounded-pill text-sm font-semibold transition-all hover:opacity-80 disabled:opacity-40"
-          style={{
-            background: "rgba(255,255,255,0.06)",
-            border: "1px solid rgba(255,255,255,0.12)",
-            color: "rgba(242,242,242,0.75)",
-          }}
-        >
-          {isLoading ? "Guardando..." : "Guardar borrador"}
-        </button>
+        {!wasPublished && (
+          <button
+            onClick={() => handleSubmit(false)}
+            disabled={isLoading}
+            className="px-5 py-2.5 rounded-pill text-sm font-semibold transition-all hover:opacity-80 disabled:opacity-40"
+            style={{
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid rgba(255,255,255,0.12)",
+              color: "rgba(242,242,242,0.75)",
+            }}
+          >
+            {isLoading ? "Guardando..." : "Guardar borrador"}
+          </button>
+        )}
 
         {activeTab !== "despliegue" ? (
           <button

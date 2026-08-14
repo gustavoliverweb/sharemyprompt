@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
+import { stripe, toStripeImageUrl } from "@/lib/stripe";
 
 const APP_URL = process.env.AUTH_URL ?? "http://localhost:3000";
 
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
           unit_amount: Math.round(price * 100),
           product_data: {
             name: asset.title,
-            ...(asset.coverImage ? { images: [`${APP_URL}${asset.coverImage}`] } : {}),
+            ...(asset.coverImage ? { images: [toStripeImageUrl(asset.coverImage, APP_URL)] } : {}),
           },
         },
       },

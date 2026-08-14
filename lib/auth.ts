@@ -73,6 +73,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           });
         }
 
+        // Guardar la cuenta OAuth real (tokens, providerAccountId) en vez de
+        // solo materializar el User — cierra el gap con PrismaAdapter sin
+        // adoptarlo (el schema requiere username único que el adapter no conoce).
+        await prisma.account.upsert({
+          where: {
+            provider_providerAccountId: {
+              provider: account.provider,
+              providerAccountId: account.providerAccountId,
+            },
+          },
+          create: {
+            userId: dbUser.id,
+            type: account.type,
+            provider: account.provider,
+            providerAccountId: account.providerAccountId,
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token,
+            session_state: account.session_state as string | undefined,
+          },
+          update: {
+            access_token: account.access_token,
+            refresh_token: account.refresh_token,
+            expires_at: account.expires_at,
+            token_type: account.token_type,
+            scope: account.scope,
+            id_token: account.id_token,
+            session_state: account.session_state as string | undefined,
+          },
+        });
+
         token.id = dbUser.id;
         token.role = dbUser.role;
         token.username = dbUser.username;

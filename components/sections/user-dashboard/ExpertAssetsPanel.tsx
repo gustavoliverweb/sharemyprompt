@@ -118,13 +118,17 @@ export function ExpertAssetsPanel({ assets: initial }: { assets: Asset[] }) {
 
                 {/* Actions */}
                 <div className="flex gap-2 mt-0.5 flex-wrap">
-                  {(asset.status === "DRAFT" || asset.status === "PUBLISHED") && (
+                  {(asset.status === "DRAFT" || asset.status === "PUBLISHED" || asset.status === "REJECTED") && (
                     <Link
                       href={`/upload-active/${asset.id}`}
                       className="text-[12px] px-3 py-1 rounded-pill transition-colors hover:opacity-80"
-                      style={{ color: "rgba(242,242,242,0.55)", border: "1px solid rgba(242,242,242,0.12)" }}
+                      style={
+                        asset.status === "REJECTED"
+                          ? { color: "#fff", background: "linear-gradient(180deg, #623cea 0%, #372284 94%)" }
+                          : { color: "rgba(242,242,242,0.55)", border: "1px solid rgba(242,242,242,0.12)" }
+                      }
                     >
-                      Editar
+                      {asset.status === "REJECTED" ? "Editar y reenviar" : "Editar"}
                     </Link>
                   )}
                   {asset.status === "PUBLISHED" && (

@@ -18,14 +18,23 @@ export async function POST(req: NextRequest) {
   }
 
   const existing = await prisma.expertRequest.findUnique({ where: { userId } });
-  if (existing) {
-    return NextResponse.json(
-      { error: "Ya tienes una solicitud registrada" },
-      { status: 409 }
-    );
-  }
-
   const { message } = await req.json().catch(() => ({ message: null }));
+
+  if (existing) {
+    if (existing.status === "PENDING" || existing.status === "APPROVED") {
+      return NextResponse.json(
+        { error: "Ya tienes una solicitud registrada" },
+        { status: 409 }
+      );
+    }
+
+    // REJECTED o REVOKED — permitir volver a intentarlo reabriendo la misma solicitud
+    const updated = await prisma.expertRequest.update({
+      where: { userId },
+      data: { status: "PENDING", message: message ?? null, reviewedAt: null, reviewedBy: null },
+    });
+    return NextResponse.json(updated, { status: 200 });
+  }
 
   const request = await prisma.expertRequest.create({
     data: { userId, message: message ?? null },

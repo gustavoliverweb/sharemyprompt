@@ -1,28 +1,22 @@
 import Link from "next/link";
 
+// Solo rutas que existen realmente en la app — ver informe de QA 2026-08,
+// sección 4.6 (enlaces de footer a rutas inexistentes).
 const NAV_COLUMNS = [
   {
     heading: "Marketplace",
-    links: [{ label: "Explorar", href: "/explore" }],
-  },
-  {
-    heading: "Estadísticas",
-    links: [
-      { label: "Ranking", href: "/ranking" },
-      { label: "Actividad", href: "/activity" },
-    ],
+    links: [{ label: "Explorar", href: "/explorer" }],
   },
   {
     heading: "Recursos",
     links: [
-      { label: "Blogs", href: "/blog" },
+      { label: "Sobre nosotros", href: "/about" },
       { label: "Ayuda", href: "/help" },
-      { label: "FAQs", href: "/faq" },
     ],
   },
   {
     heading: "Mi cuenta",
-    links: [{ label: "Perfil", href: "/profile" }],
+    links: [{ label: "Mi panel", href: "/user-dashboard" }],
   },
 ];
 

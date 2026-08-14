@@ -11,11 +11,17 @@ const NAV_LINKS = ASSET_CATEGORIES.map(({ id, label }) => ({
   href: `/explorer?cat=${id}`,
 }));
 
-const ACTION_LINKS = [
-  { label: "Comenzar a vender", href: "/upload-active", prefetch: false as const },
-  { label: "Explorar", href: "/explorer" },
-  { label: "Sobre nosotros", href: "/about" },
-];
+// Un USUARIO logueado no puede publicar todavía — mandarlo a /upload-active
+// solo lo estrella contra la pantalla de acceso denegado. Se le manda a su
+// dashboard, donde está la tarjeta para solicitar ser experto.
+function getActionLinks(role?: string | null) {
+  const sellHref = role === "USUARIO" ? "/user-dashboard" : "/upload-active";
+  return [
+    { label: "Comenzar a vender", href: sellHref, prefetch: false as const },
+    { label: "Explorar", href: "/explorer" },
+    { label: "Sobre nosotros", href: "/about" },
+  ];
+}
 
 function AvatarPlaceholder({ name }: { name?: string | null }) {
   const initials = name
@@ -102,6 +108,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { data: session, status } = useSession();
   const isAuthenticated = status === "authenticated";
+  const actionLinks = getActionLinks(session?.user?.role);
 
   return (
     <header className="z-50 backdrop-blur-md border-b border-white/[0.06]">
@@ -117,7 +124,7 @@ export function Navbar() {
 
           {/* Actions — desktop */}
           <div className="hidden lg:flex items-center gap-4 shrink-0 ml-auto">
-            {ACTION_LINKS.map(({ label, href, prefetch }) => (
+            {actionLinks.map(({ label, href, prefetch }) => (
               <Link
                 key={href}
                 href={href}
@@ -189,7 +196,7 @@ export function Navbar() {
         style={{ maxHeight: isOpen ? "500px" : "0px" }}
       >
         <nav className="flex flex-col px-6 pb-5 gap-1" aria-label="Menú móvil">
-          {ACTION_LINKS.map(({ label, href, prefetch }) => (
+          {actionLinks.map(({ label, href, prefetch }) => (
             <Link
               key={href}
               href={href}

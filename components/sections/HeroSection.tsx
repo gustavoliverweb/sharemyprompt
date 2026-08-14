@@ -1,12 +1,26 @@
 import { SearchBar } from "@/components/ui/SearchBar";
+import { prisma } from "@/lib/db";
 
-const STATS = [
-  { value: "+2.400", label: "activos verificados" },
-  { value: "+180", label: "expertos activos" },
-  { value: "4.9★", label: "valoración media" },
-];
+async function getStats() {
+  const [assetCount, expertCount, ratingAvg] = await Promise.all([
+    prisma.asset.count({ where: { status: "PUBLISHED" } }),
+    prisma.user.count({ where: { role: { in: ["EXPERTO", "ADMIN"] } } }),
+    prisma.review.aggregate({ _avg: { rating: true } }),
+  ]);
 
-export function HeroSection() {
+  return [
+    { value: `${assetCount}`, label: "activos verificados" },
+    { value: `${expertCount}`, label: "expertos activos" },
+    {
+      value: ratingAvg._avg.rating ? `${ratingAvg._avg.rating.toFixed(1)}★` : "—",
+      label: "valoración media",
+    },
+  ];
+}
+
+export async function HeroSection() {
+  const stats = await getStats();
+
   return (
     <section className="relative bg-surface overflow-hidden pt-40 pb-20">
       {/* Decorative radial glow — matches Figma GRAPHIC at 60% opacity */}
@@ -44,7 +58,7 @@ export function HeroSection() {
 
         {/* Stats */}
         <div className="flex items-center gap-8 md:gap-12">
-          {STATS.map(({ value, label }) => (
+          {stats.map(({ value, label }) => (
             <div key={label} className="text-center">
               <p className="text-xl font-bold text-white">{value}</p>
               <p className="text-xs text-foreground/45 mt-0.5">{label}</p>

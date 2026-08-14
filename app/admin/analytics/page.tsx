@@ -2,14 +2,9 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 export const metadata = { title: "Analytics — Admin" };
-
-const NAV = [
-  { href: "/admin/expert-requests", label: "Solicitudes de Experto" },
-  { href: "/admin/assets",          label: "Activos en Revisión"    },
-  { href: "/admin/analytics",       label: "Analytics"              },
-];
 
 const TYPE_LABEL: Record<string, string> = {
   PROMPT: "Prompt",
@@ -19,7 +14,8 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default async function AdminAnalyticsPage() {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/");
+  if (!session?.user) redirect("/login");
+  if (session.user.role !== "ADMIN") redirect("/403");
 
   const [allPurchases, allAssets, userCount] = await Promise.all([
     prisma.purchase.findMany({
@@ -85,7 +81,7 @@ export default async function AdminAnalyticsPage() {
 
         {/* Nav */}
         <nav className="flex gap-2 flex-wrap">
-          {NAV.map(({ href, label }) => {
+          {ADMIN_NAV.map(({ href, label }) => {
             const active = href === "/admin/analytics";
             return (
               <Link

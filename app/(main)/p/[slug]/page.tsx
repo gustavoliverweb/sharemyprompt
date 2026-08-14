@@ -95,9 +95,12 @@ function formatPrice(price: { toString(): string }): string {
   return n === 0 ? "Gratis" : `$${n.toFixed(2)}`;
 }
 
+// Sin filtro de status: la visibilidad pública se decide más abajo, después
+// de saber si quien mira ya compró el activo o es su dueño — así no se les
+// bloquea el acceso mientras el activo está en revisión por una edición.
 const getAsset = cache(async (slug: string) => {
   return prisma.asset.findFirst({
-    where: { slug, status: "PUBLISHED" },
+    where: { slug },
     include: { user: { select: { username: true, name: true } } },
   });
 });
@@ -107,7 +110,9 @@ const getAsset = cache(async (slug: string) => {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const asset = await getAsset(slug);
-  if (!asset) return { title: "Activo no encontrado — ShareMyPrompt" };
+  if (!asset || asset.status !== "PUBLISHED") {
+    return { title: "Activo no encontrado — ShareMyPrompt" };
+  }
   return {
     title: `${asset.title} — ShareMyPrompt`,
     description: asset.description ?? undefined,
@@ -175,6 +180,11 @@ export default async function ProductDetailPage({
     // El autor siempre tiene acceso a su propio activo
     if (asset.userId === session.user.id) hasPurchased = true;
   }
+
+  // Solo es público si está PUBLISHED. Si no, únicamente lo ve quien ya lo
+  // compró o es su dueño — por ejemplo, mientras está en revisión por una
+  // edición reciente, no debería 404 para quien ya pagó por él.
+  if (asset.status !== "PUBLISHED" && !hasPurchased) notFound();
 
   // ── Carrito ───────────────────────────────────────────
   let inCart = false;
@@ -294,7 +304,7 @@ export default async function ProductDetailPage({
               className="flex items-center justify-between px-5 py-4 rounded-lg"
               style={{ background: "rgba(25,25,33,0.8)", border: "1px solid rgba(255,255,255,0.08)" }}
             >
-              <span className="text-[16px] font-medium text-foreground">Licencia: Uso comercial</span>
+              <span className="text-[16px] font-medium text-foreground">Precio</span>
               <span className="text-[28px] font-bold text-white leading-none">{price}</span>
             </div>
 

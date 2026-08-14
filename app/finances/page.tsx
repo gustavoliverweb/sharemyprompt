@@ -9,7 +9,7 @@ export default async function FinanzasPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   if (session.user.role !== "EXPERTO" && session.user.role !== "ADMIN") {
-    redirect("/user-dashboard");
+    redirect("/403");
   }
 
   const assets = await prisma.asset.findMany({

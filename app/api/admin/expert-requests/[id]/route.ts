@@ -27,6 +27,10 @@ export async function PATCH(
     if (expertRequest.status !== "PENDING") {
       return NextResponse.json({ error: "Solo se pueden aprobar solicitudes pendientes" }, { status: 409 });
     }
+    const targetUser = await prisma.user.findUnique({
+      where: { id: expertRequest.userId },
+      select: { role: true },
+    });
     const [updated] = await prisma.$transaction([
       prisma.expertRequest.update({
         where: { id },
@@ -35,6 +39,14 @@ export async function PATCH(
       prisma.user.update({
         where: { id: expertRequest.userId },
         data: { role: "EXPERTO" },
+      }),
+      prisma.roleChange.create({
+        data: {
+          userId: expertRequest.userId,
+          fromRole: targetUser?.role ?? "USUARIO",
+          toRole: "EXPERTO",
+          changedById: session.user.id,
+        },
       }),
     ]);
     return NextResponse.json(updated);
@@ -55,6 +67,10 @@ export async function PATCH(
     if (expertRequest.status !== "APPROVED") {
       return NextResponse.json({ error: "Solo se puede revocar a usuarios aprobados" }, { status: 409 });
     }
+    const targetUser = await prisma.user.findUnique({
+      where: { id: expertRequest.userId },
+      select: { role: true },
+    });
     const [updated] = await prisma.$transaction([
       prisma.expertRequest.update({
         where: { id },
@@ -63,6 +79,14 @@ export async function PATCH(
       prisma.user.update({
         where: { id: expertRequest.userId },
         data: { role: "USUARIO" },
+      }),
+      prisma.roleChange.create({
+        data: {
+          userId: expertRequest.userId,
+          fromRole: targetUser?.role ?? "EXPERTO",
+          toRole: "USUARIO",
+          changedById: session.user.id,
+        },
       }),
     ]);
     return NextResponse.json(updated);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
+import { validatePillarsForReview } from "@/lib/asset-validation";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -69,6 +70,18 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "El título es obligatorio" }, { status: 422 });
     }
 
+    // specs.md: cualquier cambio a un activo ya publicado requiere nueva
+    // aprobación del ADMIN — no puede volver a DRAFT libremente.
+    const wasPublished = asset.status === "PUBLISHED";
+    const willSubmitForReview = wasPublished || publish;
+
+    if (willSubmitForReview) {
+      const pillarErrors = validatePillarsForReview({ roleDefinition, contentScope, taskDefinition });
+      if (pillarErrors.length > 0) {
+        return NextResponse.json({ error: pillarErrors.join(" · ") }, { status: 422 });
+      }
+    }
+
     const updated = await prisma.asset.update({
       where: { id },
       data: {
@@ -85,7 +98,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
         restrictions: Array.isArray(restrictions) ? restrictions : [],
         promptContent: promptContent || null,
         recommendedModel: recommendedModel || null,
-        status: publish ? "PENDING_REVIEW" : "DRAFT",
+        status: willSubmitForReview ? "PENDING_REVIEW" : "DRAFT",
         rejectionReason: null,
       },
     });

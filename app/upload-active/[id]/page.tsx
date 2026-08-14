@@ -37,6 +37,7 @@ export default async function EditAssetPage({
 }) {
   const [session, { id }] = await Promise.all([auth(), params]);
   if (!session?.user) redirect("/login");
+  if (session.user.role !== "EXPERTO" && session.user.role !== "ADMIN") redirect("/403");
 
   const asset = await prisma.asset.findUnique({ where: { id } });
 
@@ -57,6 +58,7 @@ export default async function EditAssetPage({
 
   const initialData: AssetInitialData = {
     id: asset.id,
+    status: asset.status,
     title: asset.title,
     description: asset.description,
     coverImage: asset.coverImage,

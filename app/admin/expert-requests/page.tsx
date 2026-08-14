@@ -3,18 +3,14 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { ExpertRequestsTable } from "@/components/sections/admin/ExpertRequestsTable";
-
-const NAV = [
-  { href: "/admin/expert-requests", label: "Solicitudes de Experto" },
-  { href: "/admin/assets",          label: "Activos en Revisión"    },
-  { href: "/admin/analytics",       label: "Analytics"              },
-];
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 export const metadata = { title: "Solicitudes de Experto — Admin" };
 
 export default async function AdminExpertRequestsPage() {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/");
+  if (!session?.user) redirect("/login");
+  if (session.user.role !== "ADMIN") redirect("/403");
 
   const requests = await prisma.expertRequest.findMany({
     orderBy: { createdAt: "desc" },
@@ -40,7 +36,7 @@ export default async function AdminExpertRequestsPage() {
 
         {/* Nav */}
         <nav className="flex gap-2">
-          {NAV.map(({ href, label }) => {
+          {ADMIN_NAV.map(({ href, label }) => {
             const active = href === "/admin/expert-requests";
             return (
               <Link

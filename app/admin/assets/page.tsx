@@ -3,18 +3,14 @@ import { prisma } from "@/lib/db";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { AssetReviewTable } from "@/components/sections/admin/AssetReviewTable";
+import { ADMIN_NAV } from "@/lib/admin-nav";
 
 export const metadata = { title: "Revisión de Activos — Admin" };
 
-const NAV = [
-  { href: "/admin/expert-requests", label: "Solicitudes de Experto" },
-  { href: "/admin/assets",          label: "Activos en Revisión"    },
-  { href: "/admin/analytics",       label: "Analytics"              },
-];
-
 export default async function AdminAssetsPage() {
   const session = await auth();
-  if (session?.user?.role !== "ADMIN") redirect("/");
+  if (!session?.user) redirect("/login");
+  if (session.user.role !== "ADMIN") redirect("/403");
 
   const assets = await prisma.asset.findMany({
     where: { status: "PENDING_REVIEW" },
@@ -40,7 +36,7 @@ export default async function AdminAssetsPage() {
 
         {/* Nav */}
         <nav className="flex gap-2">
-          {NAV.map(({ href, label }) => {
+          {ADMIN_NAV.map(({ href, label }) => {
             const active = href === "/admin/assets";
             return (
               <Link
